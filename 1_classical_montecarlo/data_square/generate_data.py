@@ -134,27 +134,12 @@ def gen_data_L(Ts, L, N_measure=10000, N_bins=10):
         if N_measure > 1000:
             print("simulating L={L: 3d}, T={T:.3f}".format(L=L, T=T), flush=True)
         # thermalize. Rule of thumb: spent ~10-20% of the simulation time without measurement
-        simulation(spins, bonds, T, N_measure//10) 
-        #this overwrites the initial spins configuration with the last one obtained at the end of the simulation
-        #so it actually does this "thermalization"
-
-        # Simulate with measurements: here we run the simulation (and obtain arrays of energy and magnetization) 
-        #for each b in range of N_bin, average the E's and m's of each simulation and add them to bin,
-        #so we have a set of average values for each simulation stored in bin
-
-        #then on "for key in obs:" we average the set of average values, so that we have actual
-        #realistic statistical data with the right statistical variance, given by the fact that we
-        #are not doing just the average within one simulation, but we are doing the average of the energies of 
-        #various simulations each with a different starting spin configuration
-
-        #REMARK: initial configuration of each simulation is the final configuration of previous simulation,
-        #we can do this without having correlated data because of cluster algorithm which implies short correlation systems 
-
-
+        simulation(spins, bonds, T, N_measure//10)
+        # Simlulate with measurements
         bins = dict((key, []) for key in obs)
         for b in range(N_bins):
             E, M = simulation(spins, bonds, T, N_measure//N_bins)
-            bins['E'].append(np.mean(E)/N) #mean energy per site
+            bins['E'].append(np.mean(E)/N)
             bins['C'].append(np.var(E)/(T**2*N))
             bins['M'].append(np.mean(M)/N)
             bins['absM'].append(np.mean(np.abs(M))/N)
@@ -174,9 +159,6 @@ def gen_data_L(Ts, L, N_measure=10000, N_bins=10):
     data['N_measure'] = N_measure
     data['N_bins'] = N_bins
     return data
-
-#data first spits out array of C, and each element corresponds to one temperature
-#and same for each other variable E,M bla bla bla
 
 
 def save_data(filename, data):
@@ -207,7 +189,6 @@ if __name__ == "__main__":
         output_filename = 'data_ising_square_largeL.pkl'
     data = dict()
     for L in Ls:
-        #L*L planar ising square model
         if Tc_guess is None:
             # no guess for Tc available -> scan a wide range to get a first guess
             Ts = np.linspace(1., 4., 50)
@@ -229,5 +210,3 @@ if __name__ == "__main__":
     #             }
     #          ... (further L values with same structure)
     #         }
-
-# %%
