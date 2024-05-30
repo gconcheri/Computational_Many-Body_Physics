@@ -12,6 +12,8 @@ from scipy import sparse
 import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 
+# fino a funzione gen_hamiltonian uguale a quanto fatto nell'esercizio precedente (hw4) ma in modo più efficiente
+
 Id = sparse.csr_matrix(np.eye(2))
 Sx = sparse.csr_matrix([[0., 1.], [1., 0.]])
 Sz = sparse.csr_matrix([[1., 0.], [0., -1.]])
@@ -43,7 +45,6 @@ def gen_hamiltonian(sx_list, sz_list, g, J=1.):
         H = H - J *( sx_list[j] * sx_list[(j+1)%L])
         H = H - g * sz_list[j]
     return H
-
 
 def lanczos(psi0, H, N=200, stabilize=False):
     """Perform a Lanczos iteration building the tridiagonal matrix T and ONB of the Krylov space."""
