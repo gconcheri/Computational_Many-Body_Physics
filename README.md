@@ -1,4 +1,4 @@
-# Codes for the lecture "Compuational Methods in Many-Body Physics"
+# Codes for the lecture "Computational Methods in Many-Body Physics"
 
 This repository will be updated to contain the example codes for the exercises.
 
