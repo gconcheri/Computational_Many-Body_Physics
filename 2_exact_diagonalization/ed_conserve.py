@@ -7,17 +7,24 @@ H = -J sum_i sigma^x_i sigma^x_{i+1} - g sum_i sigma^z i; periodic boundary cond
 import numpy as np
 import scipy.sparse.linalg
 import matplotlib.pyplot as plt
+import math
 
 
 def flip(s, i, N):
     """Flip the bits of the state `s` at positions i and (i+1)%N."""
     return s ^ (1 << i | 1 << ((i+1) % N))
 
-
+"""
 def translate(s, N):
-    """Shift the bits of the state `s` one position to the right (cyclically for N bits)."""
+    #Shift the bits of the state `s` one position to the right (cyclically for N bits).
     bs = bin(s)[2:].zfill(N)
     return int(bs[-1] + bs[:-1], base=2)
+"""
+def translate(s,N):
+    rightmost = s & 1
+    s >>= 1
+    rightmost <<= N-1
+    return s + rightmost 
 
 
 def count_ones(s, N):
@@ -55,6 +62,10 @@ def get_representative(s, N):
             l = i + 1
     return r, l
 
+def parity(s,N):
+    bs = bin(s)[2:].zfill(N)
+    bs = bs*2 -1
+    return math.product(bs)
 
 def calc_basis(N):
     """Determine the (representatives of the) basis for each block.
@@ -67,6 +78,10 @@ def calc_basis(N):
 
     `ind_in_basis[qn]` is a dictionary mapping from the representative spin configuration `sa`
     to the index within the list `basis[qn]`.
+
+    MY COMMENT: hanno riscalato gli autovalori k di un fattore N/(2pi), e non sono più col 2pi come definito nelle dispense ma solo
+    k = -N/2+1,...,N/2 => condizione affinchè F(k,Ra)!=0 è k*Ra = 
+
     """
     basis = dict()
     ind_in_basis = dict()
@@ -113,3 +128,5 @@ def calc_H(N, J, g):
         H[qn] = H_block
     print("done", flush=True)
     return H
+
+#returns a dictionary of the hamiltonian in blocks such that H[i] is the block of the hamiltonian with momentum k = i
