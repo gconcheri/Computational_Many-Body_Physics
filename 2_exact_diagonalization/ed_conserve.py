@@ -80,7 +80,7 @@ def calc_basis(N):
     to the index within the list `basis[qn]`.
 
     MY COMMENT: hanno riscalato gli autovalori k di un fattore N/(2pi), e non sono più col 2pi come definito nelle dispense ma solo
-    k = -N/2+1,...,N/2 => condizione affinchè F(k,Ra)!=0 è k*Ra = 
+    k = -N/2+1,...,N/2 => condizione affinchè F(k,Ra)!=0 è k*Ra = N*m
 
     """
     basis = dict()
