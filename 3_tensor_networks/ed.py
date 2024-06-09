@@ -39,7 +39,7 @@ def gen_sz_list(L):
 
 
 def gen_hamiltonian_periodic(sx_list, sz_list, g, J=1.):
-    """ assumes periodic boundery conditions """
+    """ assumes periodic boundary conditions """
     L = len(sx_list)
     H = sparse.csr_matrix((2**L, 2**L))
     for j in range(L):
@@ -49,7 +49,7 @@ def gen_hamiltonian_periodic(sx_list, sz_list, g, J=1.):
 
 
 def gen_hamiltonian(sx_list, sz_list, g, J=1.):
-    """ assumes open boundery conditions """
+    """ assumes open boundary conditions """
     L = len(sx_list)
     H = sparse.csr_matrix((2**L, 2**L))
     for j in range(L-1):
