@@ -86,9 +86,9 @@ class MPS:
 
 def init_spinup_MPS(L):
     """Return a product state with all spins up as an MPS"""
-    B = np.zeros([1, 2, 1], np.float)
+    B = np.zeros([1, 2, 1], np.float64)
     B[0, 0, 0] = 1.
-    S = np.ones([1], np.float)
+    S = np.ones([1], np.float64)
     Bs = [B.copy() for i in range(L)]
     Ss = [S.copy() for i in range(L)]
     return MPS(Bs, Ss)
