@@ -56,8 +56,8 @@ class MPS:
         result = []
         for i in range(self.L):
             theta = self.get_theta1(i)  # vL i vR
-            op_theta = np.tensordot(op, theta, axes=[1, 1])  # i [i*], vL [i] vR
-            result.append(np.tensordot(theta.conj(), op_theta, [[0, 1, 2], [1, 0, 2]]))
+            op_theta = np.tensordot(op, theta, axes=[1, 1])  # contraggo secondo indice (indicato con 1 dato l'ordine 0,1,2) del primo tensore con secondo indice secondo tensore - i [i*], vL [i] vR
+            result.append(np.tensordot(theta.conj(), op_theta, [[0, 1, 2], [1, 0, 2]])) #contraggo primo indice (0) con secondo indice (1) ecc...
             # [vL*] [i*] [vR*], [i] [vL] [vR]
         return np.real_if_close(result)
 
@@ -77,12 +77,27 @@ class MPS:
         result = []
         for i in range(1, self.L):
             S = self.Ss[i].copy()
-            S = S[S > 1e-30]  # 0*log(0) should give 0; avoid warnings or NaN by discarding small S
+            S[S < 1.e-20] = 0.  # 0*log(0) should give 0; avoid warning or NaN.
             S2 = S * S
             assert abs(np.linalg.norm(S) - 1.) < 1.e-14
             result.append(-np.sum(S2 * np.log(S2)))
         return np.array(result)
+    
+    def correlation_function(self, X, Y, i):
+        """Return the correlations <psi|X_i Y_j|psi> for all j >= i"""
+        result = [self.site_expectation_value(X @ Y)[i]] # first entry of results list, i = j 
+        #result.append(self.bond_expectation_value(np.kron(X,Y))[i]) #should be second entry as j=i+1
+        theta = self.get_theta1(i)
+        op_theta = np.tensordot(X, theta, axes=[1, 1]) # -> i vL vR
+        firsttensor = np.tensordot(theta.conj(), op_theta, [[0, 1], [1, 0]]) #index 0 is vR on bottom, index 1 vR on top - vR* vR
+        for j in range(i + 1, self.L):
+            secondtensor = np.tensordot(firsttensor, self.Bs[j], [1,0]) # vR* [vR], [vL] i vR -> vR* i vR
+            firsttensor = np.tensordot(self.Bs[j].conj(), secondtensor, [[0,1],[0,1]]) # [vL*] [i*] vR*, [vR*] [i] vR -> in modo che ho di nuovo vR* vR
+            thirdtensor = np.tensordot(secondtensor, Y, [1,1]) # vR* [i] vR, i [i*]
+            result.append(np.tensordot(thirdtensor, self.Bs[j].conj(), [[2,0,1],[1,0,2]])) # [vR*] [vR] [i], [vL*] [i*] [vR*] -> vR vR*
+        return result   
 
+            
 
 def init_spinup_MPS(L):
     """Return a product state with all spins up as an MPS"""
@@ -94,12 +109,15 @@ def init_spinup_MPS(L):
     return MPS(Bs, Ss)
 
 def init_spinright_MPS(L):
+    """Return a product state with all spins right as an MPS"""
     B = np.zeros([1, 2, 1], np.float64)
-    B[0,0,0] = B[0,1,0] = 1/np.sqrt(2)
+    B[0, 0, 0] = 1/np.sqrt(2)
+    B[0, 1, 0] = 1/np.sqrt(2)
     S = np.ones([1], np.float64)
     Bs = [B.copy() for i in range(L)]
     Ss = [S.copy() for i in range(L)]
-    return MPS(Bs,Ss)
+    return MPS(Bs, Ss)
+
 
 def split_truncate_theta(theta, chi_max, eps):
     """Split and truncate a two-site wave function in mixed canonical form.
