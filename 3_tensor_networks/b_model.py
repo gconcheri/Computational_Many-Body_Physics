@@ -39,6 +39,21 @@ class TFIModel:
         self.sigmaz = np.array([[1., 0.], [0., -1.]])
         self.id = np.eye(2)
         self.init_H_bonds()
+        self.init_H_mpo()
+
+    def init_H_mpo(self):
+        J,g = self.g, self.J
+        sx, sz, id = self.sigmax, self.sigmaz, self.id
+        L = self.L
+        zero = np.zeros((2,2))
+        W = np.array([[id,sx,-g*sz],[zero,zero,-J*sx],[zero,zero,id]])
+        print(W.shape)
+        vL = np.zeros(6)
+        vL[0] = 1.0
+        vR = np.transpose(np.zeros(6))
+        vL[-1] = 1.0
+
+        self.H_mpo = [W for i in range(L)]
 
     def init_H_bonds(self):
         """Initialize `H_bonds` hamiltonian. Called by __init__()."""
