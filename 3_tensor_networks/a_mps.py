@@ -18,7 +18,7 @@ class MPS:
     Attributes
     ----------
     Bs : list of np.Array[ndim=3]
-        The 'matrices' in right-canonical form, one for each physical site.
+        The 'matrices' in right-canonical form, one for each physical site: Γ_n Λ_n+1
         Each `B[i]` has legs (virtual left, physical, virtual right), in short ``vL i vR``
     Ss : list of np.Array[ndim=1]
         The Schmidt values at each of the bonds, ``Ss[i]`` is left of ``Bs[i]``.

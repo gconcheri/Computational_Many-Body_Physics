@@ -16,9 +16,10 @@ def calc_U_bonds(model, dt):
     d = H_bonds[0].shape[0]
     U_bonds = []
     for H in H_bonds:
-        H = np.reshape(H, [d * d, d * d])
+        H = np.reshape(H, [d * d, d * d]) #reshape it as a matrix to calculate the time evolution
         U = expm(-dt * H)
-        U_bonds.append(np.reshape(U, [d, d, d, d]))
+        U_bonds.append(np.reshape(U, [d, d, d, d])) # reshape it as a tensor with 4 legs so that I can "multiply" it with MPS
+        #U_bonds is list of all infinitesimal time evolutions for each pair of sites j,j+1
     return U_bonds
 
 
@@ -46,10 +47,10 @@ def update_bond(psi, i, U_bond, chi_max, eps):
     # split and truncate
     Ai, Sj, Bj = split_truncate_theta(Utheta, chi_max, eps)
     # put back into MPS
-    Gi = np.tensordot(np.diag(psi.Ss[i]**(-1)), Ai, axes=[1, 0])  # vL [vL*], [vL] i vC
-    psi.Bs[i] = np.tensordot(Gi, np.diag(Sj), axes=[2, 0])  # vL i [vC], [vC] vC
+    Gi = np.tensordot(np.diag(psi.Ss[i]**(-1)), Ai, axes=[1, 0])  # vL [vL*], [vL] i vC <- qui trasformiamo Ai in Γi, per tornare a canonical form
+    psi.Bs[i] = np.tensordot(Gi, np.diag(Sj), axes=[2, 0])  # vL i [vC], [vC] vC -> calcoliamo Γi Si per ottenere right canonical form Bs_i
     psi.Ss[j] = Sj  # vC
-    psi.Bs[j] = Bj  # vC j vR
+    psi.Bs[j] = Bj  # vC j vR <- Bj è già in right canonical form 
 
 
 

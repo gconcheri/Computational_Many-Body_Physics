@@ -66,9 +66,13 @@ class TFIModel:
                 gL = self.g
             if i + 1 == self.L - 1: # last bond
                 gR = self.g
-            H_bond = -self.J * np.kron(sx, sx) - gL * np.kron(sz, id) - gR * np.kron(id, sz)
-            # H_bond has legs ``i, j, i*, j*``
-            H_list.append(np.reshape(H_bond, [d, d, d, d]))
+            H_bond = -self.J * np.kron(sx, sx) - gL * np.kron(sz, id) - gR * np.kron(id, sz) 
+            #here dim(H) = d^2*d^2, and its indeces are (n,m) = ((i,j),(i*,j*)) where i refers to first qubit, 
+            # and j to second qubit! 
+
+            #now we reshape it such that: H_bond has legs ``i, j, i*, j*`` and dim(H) = d*d*d*d -> to better understand how this works have a look 
+            # at tensor networks course on the part where we describe with tensor net formulation kronecker product
+            H_list.append(np.reshape(H_bond, [d, d, d, d])) 
         self.H_bonds = H_list
 
     def energy(self, psi):
