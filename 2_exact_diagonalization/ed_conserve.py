@@ -91,9 +91,10 @@ def calc_basis(N):
             Ra = is_representative(sa, k, N)
             if Ra > 0:
                 if qn not in basis:
-                    basis[qn] = []
+                    basis[qn] = [] #base di autostati con autovalore k
                     ind_in_basis[qn] = dict()
                 ind_in_basis[qn][sa] = len(basis[qn])
+                #so first element of the basis has index 0, second element index 1 and so on!
                 basis[qn].append((sa, Ra))
     return basis, ind_in_basis
 
@@ -109,15 +110,15 @@ def calc_H(N, J, g):
         H_block_inds = []
         a = 0
         for sa, Ra in basis[qn]:
-            H_block_data.append(-g * (-N + 2*count_ones(sa, N)))
+            H_block_data.append(-g * (-N + 2*count_ones(sa, N))) #nell'argomento di append c'è il calcolo dei diagonal matrix elements 
             H_block_inds.append((a, a))
             for i in range(N):
                 sb, l = get_representative(flip(sa, i, N), N)
                 if sb in ind_in_basis[qn]:
                     b = ind_in_basis[qn][sb]
-                    Rb = basis[qn][b][1]
+                    Rb = basis[qn][b][1] #selezioniamo periodo Ra dell'elemento b-esimo di lista basis[qn]
                     k = qn*2*np.pi/N
-                    H_block_data.append(-J*np.exp(-1j*k*l)*np.sqrt(Ra/Rb))
+                    H_block_data.append(-J*np.exp(-1j*k*l)*np.sqrt(Ra/Rb)) #nell'argomento di append c'è il calcolo degli off-diagonal matrix elements 
                     H_block_inds.append((b, a))
                 # else: flipped state incompatible with the k value, |b(k)> is zero
             a += 1
