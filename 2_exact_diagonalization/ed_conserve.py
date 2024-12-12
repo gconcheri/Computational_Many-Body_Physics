@@ -62,10 +62,15 @@ def get_representative(s, N):
             l = i + 1
     return r, l
 
-def parity(s,N):
+"""def parity(s,N):
     bs = bin(s)[2:].zfill(N)
     bs = bs*2 -1
     return math.product(bs)
+    """
+
+#other way to calculate parity
+def parity(s, N):
+    return int((-1.)**(-N + count_ones(s, N)))
 
 def calc_basis(N):
     """Determine the (representatives of the) basis for each block.
@@ -86,12 +91,13 @@ def calc_basis(N):
     basis = dict()
     ind_in_basis = dict()
     for sa in range(2**N):
+        p = parity(sa,N)
         for k in range(-N//2+1, N//2+1):
-            qn = k
+            qn = (p, k)
             Ra = is_representative(sa, k, N)
             if Ra > 0:
                 if qn not in basis:
-                    basis[qn] = [] #base di autostati con autovalore k
+                    basis[qn] = [] #base di autostati con autovalore momento k, parità p
                     ind_in_basis[qn] = dict()
                 ind_in_basis[qn][sa] = len(basis[qn])
                 #so first element of the basis has index 0, second element index 1 and so on!
@@ -117,7 +123,7 @@ def calc_H(N, J, g):
                 if sb in ind_in_basis[qn]:
                     b = ind_in_basis[qn][sb]
                     Rb = basis[qn][b][1] #selezioniamo periodo Ra dell'elemento b-esimo di lista basis[qn]
-                    k = qn*2*np.pi/N
+                    k = qn[1]*2*np.pi/N
                     H_block_data.append(-J*np.exp(-1j*k*l)*np.sqrt(Ra/Rb)) #nell'argomento di append c'è il calcolo degli off-diagonal matrix elements 
                     H_block_inds.append((b, a))
                 # else: flipped state incompatible with the k value, |b(k)> is zero
@@ -130,4 +136,4 @@ def calc_H(N, J, g):
     print("done", flush=True)
     return H
 
-#returns a dictionary of the hamiltonian in blocks such that H[i] is the block of the hamiltonian with momentum k = i
+#returns a dictionary of the hamiltonian in blocks such that H[(i,p)] is the block of the hamiltonian with momentum k = i, parity p

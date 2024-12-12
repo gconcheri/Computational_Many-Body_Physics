@@ -35,7 +35,7 @@ def load_data(filename="mnist.pkl.gz"):
 
     The ``validation_data`` and ``test_data`` are similar, except
     each contains only 10,000 images.
-
+    
     This is a nice data format, but for use in neural networks it's
     helpful to modify the format of the ``training_data`` a little.
     That's done in the wrapper function ``load_data_wrapper()``, see

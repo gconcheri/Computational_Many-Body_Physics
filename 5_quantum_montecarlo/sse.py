@@ -67,6 +67,8 @@ def init_SSE_square(Lx, Ly):
     bonds = np.array(bonds, dtype=np.intp)
     return spins, op_string, bonds
 
+#here we go through string from bottom to top and insert diagonal terms based on probability according to detailed balance
+#such that stationary probability distribution is equal to weights in partition function.
 
 @jit(nopython=True)
 def diagonal_update(spins, op_string, bonds, beta):
@@ -76,7 +78,7 @@ def diagonal_update(spins, op_string, bonds, beta):
     # count the number of non-identity operators
     n = np.sum(op_string != -1)
     # calculate ratio of acceptance probabilities for insert/remove  n <-> n+1
-    # <alpha|Hdiag|alpha> = 1/4 + <alpha |SzSz|alpha> = 0.5 for antiparallel spins
+    # <alpha|Hdiag|alpha> = 1/4 - <alpha |SzSz|alpha> = 0.5 for antiparallel spins (0 for parallel spins)
     prob_ratio = 0.5*beta*n_bonds  # /(M-n) , but the latter depends on n which still changes
     for p in range(M):  # go through the operator string
         op = op_string[p]
@@ -85,12 +87,12 @@ def diagonal_update(spins, op_string, bonds, beta):
             if spins[bonds[b, 0]] != spins[bonds[b, 1]]:
                 # can only insert if the two spins are anti-parallel!
                 prob = prob_ratio / (M - n)
-                if np.random.rand() < prob:  # (metropolis-like)
+                if np.random.rand() < prob:  # (metropolis-like) - min(1,p_acc)
                     # insert a diagonal operator
                     op_string[p] = 2*b
-                    n += 1
+                    n += 1 # n+1 = number of operators after insertion
         elif np.mod(op, 2) == 0:  # diagonal operator: propose to remove
-            prob = 1/prob_ratio * (M-n+1)  # n-1 = number operators after removal = n in above formula
+            prob = 1/prob_ratio * (M-n+1)  # n-1 = number operators after removal (n <-> n-1 linked)
             if np.random.rand() < prob:
                 # remove diagonal operator
                 op_string[p] = -1
@@ -98,9 +100,9 @@ def diagonal_update(spins, op_string, bonds, beta):
         else:  # offdiagonal operator: update spin configuration to get propagated |alpha(p)>
             b = op // 2
             # H^off ~= (S+S- + S-S+) = spin flip on both sites for antiparallel spins.
-            # (We never have configurations with operators acting on parallel spins!)
-            spins[bonds[b, 0]] = -spins[bonds[b, 0]]
-            spins[bonds[b, 1]] = -spins[bonds[b, 1]]
+            # (We never have configurations with off-dag operators acting on parallel spins!)
+            spins[bonds[b, 0]] = -spins[bonds[b, 0]] #update spins at level p such that we know what are possible diagonal
+            spins[bonds[b, 1]] = -spins[bonds[b, 1]] # operators that we can insert in next levels p+1 ,..., M-1
     return n
 
 
@@ -120,12 +122,15 @@ def create_linked_vertex_list(spins, op_string, bonds):
     An efficient way to do this is to create a double-linked `vertex_list` which contains
     the connections between the vertices of the operators. Each operator has 4 vertices (=legs in
     the tensor network language), so if we simply enumerate all the vertices in the operator
-    string, we get v0 = 4*p, v1=4*p+1, v2=4*p+2, v4=4*p+3 for the vertices
+    string, we get v0 = 4*p, v1=4*p+1, v2=4*p+2, v3=4*p+3 for the vertices
         v0  v1
          |--|
          |Op|  <-- op_string[p]
          |--|
         v2  v3
+    By decsribing vertices with this notation, they are identified by two characteristics: level p 
+    of the operator they are part of, and position on operator (bottom left, bottom right...)
+
     In this function, we set the entries of the `vertex_list` for any
     (vertically) connected pair `v, w` (i.e. vertical parts of the loops) we have
     ``v = vertex_list[w]`` and ``w = vertex_list[v]``.
@@ -143,7 +148,8 @@ def create_linked_vertex_list(spins, op_string, bonds):
     first_vertex_at_site = -1 * np.ones(n_sites, np.intp) # -1 = no vertex found (yet)
     last_vertex_at_site = -1 * np.ones(n_sites, np.intp) # -1 = no vertex found (yet)
 
-    # iterate over all operators
+    # iterate over all operators (we are going from top to bottom in this approach 
+    # and top operator is first one)
     for p in range(M):
         v0 = p*4  # left incoming vertex
         v1 = v0 + 1  # right incoming vertex
@@ -160,8 +166,9 @@ def create_linked_vertex_list(spins, op_string, bonds):
             if v2 == -1:  # no operator encountered at this site before
                 first_vertex_at_site[s0] = v0
             else:  # encountered an operator at this vertex before -> create link
-                vertex_list[v2] = v0
-                vertex_list[v0] = v2
+                vertex_list[v2] = v0 #link between down left vertix (v2) of operator on top and up vertix (v0) of the one below it 
+                vertex_list[v0] = v2 #same, done for both vertices such that whenever we get to one of the two through
+                                    #a loop, we then always go from one to the other
             if v3 == -1:   # and similar for other site
                 first_vertex_at_site[s1] = v1
             else:
@@ -185,7 +192,7 @@ def flip_loops(spins, op_string, vertex_list, first_vertex_at_site):
     """Given the vertex_list, flip each loop with prob. 0.5.
     Once we have the vertex list, we can go through all the vertices and flip each loop with
     probability 0.5. When we propose to flip a loop, we go through it and mark it as flipped (-1)
-    or visited (-2) in the vertex list to avoid a secend proposal to flip it.
+    or visited (-2) in the vertex list to avoid a second proposal to flip it.
     Note that for an integer number `i`, the operation ``i ^ 1`` gives i+1 or i-1 depending on
     whether `i` is even or odd: it flips 0<->1, 2<->3, 4<->5, ...
     This is used to switch between diagonal/offdiagonal operators in the operator string when
@@ -197,19 +204,20 @@ def flip_loops(spins, op_string, vertex_list, first_vertex_at_site):
     # iterate over all possible beginnings of loops
     # (step 2: v0+1 belongs to the same loop as v0)
     for v0 in range(0, 4*M, 2):
-        if vertex_list[v0] < 0:  # marked: we've visited the loop starting here before.
-            continue
+        if vertex_list[v0] < 0: # Check if this vertex has already been marked (= -1 or -2), i.e. visited before 
+            continue #If marked, skip to next iteration of for loop, i.e. to the next vertex
         v1 = v0  # we move v1 as open end of the loop around until we come back to v0
         if np.random.rand() < 0.5:
             # go through the loop and flip it
             while True:
-                op = v1 // 4
-                op_string[op] = op_string[op] ^ 1  # flip diagonal/offdiagonal
-                vertex_list[v1] = -1
-                v2 = v1 ^ 1
-                v1 = vertex_list[v2]
-                vertex_list[v2] = -1
-                if v1 == v0:
+                op = v1 // 4  # Determine the operator index from the vertex.
+                op_string[op] = op_string[op] ^ 1  # Flip diagonal/offdiagonal.
+                vertex_list[v1] = -1  # Mark the vertex as flipped.
+                v2 = v1 ^ 1  # Get the connected vertex in the operator horizontally
+                v1 = vertex_list[v2]  # Move to the next vertex in the loop vertically!
+                vertex_list[v2] = -1  # Mark the connected vertex as flipped <- first, this entry connected me to 
+                                      #other vertix vertically, now it marks vertix as flipped (-1)
+                if v1 == v0:  # If we have looped back to the starting vertex, exit the loop.
                     break
         else:
             # don't flip the loop, but go through it to mark it as visited
@@ -225,7 +233,7 @@ def flip_loops(spins, op_string, vertex_list, first_vertex_at_site):
             if np.random.rand() < 0.5:
                 spins[s0] = -spins[s0]
         else:  # there is an operator acting on that site
-            if vertex_list[first_vertex_at_site[s0]] == -1:  # did we flip the loop?
+            if vertex_list[first_vertex_at_site[s0]] == -1:  # did we flip the loop? yes
                 spins[s0] = -spins[s0]  # then we also need to flip the spin
     # done
 
@@ -238,6 +246,8 @@ def thermalize(spins, op_string, bonds, beta, n_updates_warmup):
         n = diagonal_update(spins, op_string, bonds, beta)
         loop_update(spins, op_string, bonds)
         # check if we need to increase the length of op_string
+        # i.e. if M_new is approximately equal to M_old or slightly bigger, it means that we need to truncate the string
+        # at a higher M, otherwise we will not sample configurations which are likely to happen with higher n
         M_old = len(op_string)
         M_new = n + n // 3
         if M_new > M_old:

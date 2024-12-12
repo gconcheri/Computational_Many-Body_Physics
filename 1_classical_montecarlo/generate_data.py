@@ -29,7 +29,7 @@ def init_system(Lx, Ly):
             bonds.append([n, m1])
             bonds.append([n, m2])
     bonds = np.array(bonds)
-    spins = np.random.randint(0, 2, size=(N,))*2 - 1
+    spins = np.random.randint(0, 2, size=(N,))*2 - 1 # array with spin states (+1 or -1 randomly)
     return spins, bonds, N
 
 
@@ -79,7 +79,11 @@ def swendsen_wang_update(spins, bonds, T):
     weights = get_weights(spins, bonds, T)
     graph = csr_matrix((weights, (bonds[:, 0], bonds[:, 1])), shape=(N, N))
     graph += csr_matrix((weights, (bonds[:, 1], bonds[:, 0])), shape=(N, N))
+    #graph = graph + graph.T
     N_components, labels = connected_components(graph, directed=False)
+    #number of components = number of clusters!
+    #label: lista che etichetta ogni sito/entrata di spin-config con numero di cluster di appartenenza
+    #eg. con N = 5 label = [0,0,0,1,2] -> primi tre siti formano un cluster, gli ultimi due sono singoli
     flip_spins(spins, N_components, labels)
 
 
@@ -174,7 +178,6 @@ def gen_data_L(Ts, L, N_measure=10000, N_bins=10):
     data['N_measure'] = N_measure
     data['N_bins'] = N_bins
     return data
-
 #data first spits out array of C, and each element corresponds to one temperature
 #and same for each other variable E,M bla bla bla
 
